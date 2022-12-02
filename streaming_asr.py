@@ -119,17 +119,18 @@ for block in sf.blocks(wpath, blocksize=640, dtype='float32'):
     data_queue.put(data)
     count += 1
 
-    if previous_right_context is None and count == 5:
-        process()
+#     if previous_right_context is None and count == 5:
+#         process()
 
-    if count > 5 and count % 5 == 0:
-        process()
+#     if count > 5 and count % 5 == 0:
+#         process()
     
 while count % 5 != 0:
     data_queue.put(data)
     count += 1
 
-process()
+while not data_queue.empty():
+    process()
 
 print()
 
