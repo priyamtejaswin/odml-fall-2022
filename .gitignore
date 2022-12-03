@@ -9,4 +9,6 @@ lab3/
 .ipynb_checkpoints/
 *.json
 *.dict
-
+*.mp3
+covost2_en_de/
+librispeech/
