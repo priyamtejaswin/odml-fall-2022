@@ -1,5 +1,6 @@
 import pyaudio
-import queue
+# import queue
+from collections import deque
 import numpy as np
 import torch
 import torchaudio
@@ -20,17 +21,16 @@ wpath = sys.argv[1]
 ################################################################
 
 
-data_queue = queue.Queue()
-
-
-def callback(in_data, frame_count, time_info, status):
-    global data_queue
-    data_queue.put(in_data)
-    return in_data, pyaudio.paContinue
-
-
+data_queue = deque()
 state = None
 hypo = None
+previous_right_context = None
+
+
+# def callback(in_data, frame_count, time_info, status):
+#     global data_queue
+#     data_queue.put(in_data)
+#     return in_data, pyaudio.paContinue
 
 
 def transcribe(np_array, should_print=True):
@@ -42,20 +42,26 @@ def transcribe(np_array, should_print=True):
         print(transcript, end="", flush=True)
 
 
-previous_right_context = None
-
-
 def process(should_print=True):
-    global previous_right_context
+    global previous_right_context, data_queue
+    if len(data_queue) == 0:
+        return
+    
     if previous_right_context is None:
         previous_right_context = [
-            np.frombuffer(data_queue.get(), dtype=np.float32) for _ in range(1)
+            data_queue.popleft() for _ in range(1)
         ]
+
+    if len(data_queue) < 4:
+        data_queue = deque()
+        return
 
     # Get 4 segments.
     segments = [
-        np.frombuffer(data_queue.get(), dtype=np.float32) for _ in range(4)
+        data_queue.popleft() for _ in range(4)
     ]
+
+    print("(%d)" % len(data_queue), end="", flush=True)
 
     current_input = previous_right_context + segments
 
@@ -74,49 +80,50 @@ def process(should_print=True):
 # Then, since the lowest common factor between 640 and 3600 is 640, we'll
 # read from the stream in 640-sample increments.
 
-p = pyaudio.PyAudio()
+# p = pyaudio.PyAudio()
 
 CHANNELS = 1
 RATE = 16000
 
-stream = p.open(
-    format=pyaudio.paFloat32,
-    channels=CHANNELS,
-    rate=RATE,
-    input=True,
-    output=False,
-    frames_per_buffer=640,
-    stream_callback=callback,
-)
+# stream = p.open(
+#     format=pyaudio.paFloat32,
+#     channels=CHANNELS,
+#     rate=RATE,
+#     input=True,
+#     output=False,
+#     frames_per_buffer=640,
+#     stream_callback=callback,
+# )
 
-stream.start_stream()
+# stream.start_stream()
 
 # We need to initialize the model by evaluating
 # a few samples.
 # If we skip this, evaluation latency will become
 # prohibitively large.
-print("Initializing model...")
-for _ in range(10):
-    process(should_print=False)
 
-print("Initialization complete.")
+# print("Initializing model...")
+# for _ in range(10):
+#     process(should_print=False)
 
-stream.stop_stream()
-stream.close()
+# print("Initialization complete.")
 
-data_queue = queue.Queue()
-previous_right_context = None
-state = None
-prev_hypo = None
+# stream.stop_stream()
+# stream.close()
+
+# data_queue = queue.Queue()
+# previous_right_context = None
+# state = None
+# prev_hypo = None
 
 # wpath = "sc_v01_test/seven/0ea0e2f4_nohash_0.wav"
 # wpath = "download.wav"
 
 count = 0
-for block in sf.blocks(wpath, blocksize=640, dtype='float32'):
+for data in sf.blocks(wpath, blocksize=640, dtype='float32'):
     # print("block", block.shape)
-    data = block.tobytes()
-    data_queue.put(data)
+    # data = block.tobytes()
+    data_queue.append(data)
     count += 1
 
 #     if previous_right_context is None and count == 5:
@@ -126,10 +133,10 @@ for block in sf.blocks(wpath, blocksize=640, dtype='float32'):
 #         process()
     
 while count % 5 != 0:
-    data_queue.put(data)
+    data_queue.append(data)
     count += 1
 
-while not data_queue.empty():
+while data_queue:
     process()
 
 print()
