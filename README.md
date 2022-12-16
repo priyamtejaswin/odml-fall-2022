@@ -1,9 +1,6 @@
-# SpeechCommands PyTorch CNN Baseline
+# FancyTeamName ODML project code
 
-* Pre-trained state dictionary -- `sc_v01_trained.pt`
-* All data -- <https://huggingface.co/datasets/speech_commands/blob/main/dataset_infos.json>
-* Test data -- `test/`
-* Model class -- spec_cnn_baseline.py
-* Evaluate
-    * Env -- `source ~/whisper_env/bin/activate`
-    * Command -- `python evalbaseline.py path/to/dir/with/files/in/label/dirs.wav`
+**On-Device Speech Recognition and Translation**
+
+Demo of Detection + ASR + Translation pipeline running on Raspberry Pi 4 (model B) -- <https://docs.google.com/file/d/1eNw6npnhg4ofKkCVjqwUYWjEf-43P1In/preview>
+
